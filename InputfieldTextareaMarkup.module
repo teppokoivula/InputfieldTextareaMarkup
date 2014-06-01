@@ -22,7 +22,7 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
         return array(
             'title' => __('Textarea Markup', __FILE__),
             'summary' => __('May contain markup, plain text and optionally values from other fields.', __FILE__),
-            'version' => 100,
+            'version' => 101,
         );
     }
 
@@ -81,8 +81,10 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
             preg_match_all('#{{(.*?)}}#i', $out, $matches);
             if (count($matches)) {
                 foreach ($matches[1] as $key => $field_name) {
-                    if ($page->get($field_name)) {
-                        $out = str_replace($matches[0][$key], $page->$field_name, $out);
+                    $field_value = $page->get($field_name);
+                    if ($field_value || $page->template->hasField($field_name)) {
+                        $field_value = $this->sanitizer->text($field_value);
+                        $out = str_replace($matches[0][$key], $field_value, $out);
                     }
                 }
             }
