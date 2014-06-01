@@ -1,0 +1,154 @@
+<?php
+
+/**
+ * Inputfield Textarea Markup
+ * 
+ * Intended for outputting markup as help or commentary among other inputfields,
+ * mainly in Page Edit context. Loosely based on InputfieldMarkup from core, but
+ * extends textarea to allow overriding markup on a per page basis by superuser.
+ * 
+ * @copyright Copyright (c) 2014, Teppo Koivula
+ * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License, version 2
+ * 
+ */
+class InputfieldTextareaMarkup extends InputfieldTextarea {
+
+    /**
+     * Return basic module info
+     *
+     * @return array
+     */
+    public static function getModuleInfo() {
+        return array(
+            'title' => __('Textarea Markup', __FILE__),
+            'summary' => __('May contain markup, plain text and optionally values from other fields.', __FILE__),
+            'version' => 100,
+        );
+    }
+
+    /**
+     * Init module; set default values and attach hooks
+     *
+     */
+    public function init() {
+        $this->set('defaultValue', '');
+        $this->set('skipFieldLabel', 0);
+        $this->set('textformatters', array());
+        $this->addHookBefore('Pages::saveReady', $this, 'hookSaveReady');
+        parent::init();
+    }
+
+    /**
+     * Prevent non-superusers from editing Textarea Markup fields and reset
+     * page-specific field value if it matches defaultValue in field settings.
+     * 
+     * @param HookEvent $event
+     * @throws WirePermissionException if non-superuser attempts to edit Textarea Markup field
+     */
+    public function hookSaveReady(HookEvent $event) {
+        $page = $event->arguments[0];
+        foreach ($page->fields as $field) {
+            $inputfield = $field->getInputfield($page);
+            if ($inputfield->className == $this->className()) {
+                if ($page->isChanged($field->name) && !$this->user->isSuperuser()) {
+                    throw new WirePermissionException($this->_('Only superusers can edit field \'' . $field->name . '\''));
+                } else if ($page->$field === $inputfield->defaultValue) {
+                    $page->$field = '';
+                }
+            }
+        }
+    }
+
+    /**
+     * Render field value and/or markup from inputfield settings, with possible
+     * placeholders ({{field_name}}) replaced by values from other page fields.
+     *
+     * @return string rendered output
+     */
+    public function ___render() {
+
+        $this->skipLabel = $this->skipFieldLabel;
+        
+        $value = $this->attr('value') ? $this->attr('value') : $this->defaultValue;
+        $out = $value;
+
+        $page = null;
+        if ($this->process == "ProcessPageEdit") {
+            $page = $this->process->getPage();
+        }
+
+        if ($page && $out && strpos($out, "{{") !== false && strpos($out, "}}") !== false) {
+            preg_match_all('#{{(.*?)}}#i', $out, $matches);
+            if (count($matches)) {
+                foreach ($matches[1] as $key => $field_name) {
+                    if ($page->get($field_name)) {
+                        $out = str_replace($matches[0][$key], $page->$field_name, $out);
+                    }
+                }
+            }
+        }
+        
+        if (count($this->textformatters)) {
+            foreach ($this->textformatters as $textformatter) {
+                $t = wire('modules')->get($textformatter);
+                if ($t) $t->formatValue(wire('page'), new Field(), $out);
+            }
+        }
+        
+        if ($page && $this->user->isSuperuser()) {
+            $done = $this->_('Done');
+            $edit = $this->_('Edit');
+            $note = $this->_('Please note that visible value won\'t be updated until you save the page.');
+            $out = "<a class='textarea-markup-edit' href='#' data-done='{$done}' data-edit='{$edit}'><i class='fa fa-edit'></i> <span>{$edit}</span></a>"
+                 . "<div>{$out}</div>"
+                 . "<textarea class='textarea-markup-edit' rows='4' name='{$this->name}'>{$value}</textarea>"
+                 . "<p class='textarea-markup-edit notes'>{$note}</p>";
+        } else {
+            $out .= "<textarea class='textarea-markup-edit' name='{$this->name}'>{$value}</textarea>";
+        }
+        
+        return $out;
+        
+    }
+
+    /**
+     * Render value of this field; same as ___render().
+     *
+     * @return string rendered output
+     */
+    public function ___renderValue() {
+        return $this->render();
+    }
+    
+    /**
+     * Get inputfields for config
+     * 
+     * @return InputfieldWrapper
+     */
+    public function ___getConfigInputfields() {
+
+        $inputfields = parent::___getConfigInputfields();
+        $inputfields->remove($inputfields->get('placeholder'));
+        $inputfields->remove($inputfields->get('stripTags'));
+        $inputfields->remove($inputfields->get('rows'));
+
+        $field = wire('modules')->get('InputfieldTextarea');
+        $field->attr('id+name', 'defaultValue'); 
+        $field->attr('value', $this->defaultValue);
+        $field->attr('rows', 10);
+        $field->notes = $this->_('You can use {{field_name}} to output value of field_name field of current page.');
+        $field->label = $this->_('Default value');
+        $inputfields->add($field);
+
+        $field = wire('modules')->get('InputfieldCheckbox');
+        $field->attr('id+name', 'skipFieldLabel');
+        $field->attr('value', Inputfield::skipLabelHeader);
+        $field->label = $this->_('Skip label for this field');
+        if ($this->skipFieldLabel) $field->attr('checked', 'checked');
+        $inputfields->add($field);
+
+        return $inputfields;
+
+    }
+    
+}

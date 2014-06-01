@@ -1,0 +1,10 @@
+a.textarea-markup-edit {
+    display: block;
+    margin-bottom: 0.5em !important;
+}
+
+p.textarea-markup-edit,
+textarea.textarea-markup-edit {
+    display: none;
+    margin: 0;
+}
