@@ -22,7 +22,7 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
         return array(
             'title' => __('Textarea Markup', __FILE__),
             'summary' => __('May contain markup, plain text and optionally values from other fields.', __FILE__),
-            'version' => 101,
+            'version' => 102,
         );
     }
 
@@ -106,7 +106,7 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
                  . "<textarea class='textarea-markup-edit' rows='4' name='{$this->name}'>{$value}</textarea>"
                  . "<p class='textarea-markup-edit notes'>{$note}</p>";
         } else {
-            $out .= "<textarea class='textarea-markup-edit' name='{$this->name}'>{$value}</textarea>";
+            $out .= "<textarea class='textarea-markup-edit' name='{$this->name}'>" . $this->attr('value') . "</textarea>";
         }
         
         return $out;
