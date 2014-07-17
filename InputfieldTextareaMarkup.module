@@ -22,19 +22,18 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
         return array(
             'title' => __('Textarea Markup', __FILE__),
             'summary' => __('May contain markup, plain text and optionally values from other fields.', __FILE__),
-            'version' => 103,
+            'version' => 104,
         );
     }
 
     /**
-     * Init module; set default values and attach hooks
+     * Init module (set default values)
      *
      */
     public function init() {
         $this->set('defaultValue', '');
         $this->set('skipFieldLabel', 0);
         $this->set('textformatters', array());
-        $this->addHookBefore('Pages::saveReady', $this, 'hookSaveReady');
         parent::init();
     }
 
@@ -42,20 +41,15 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
      * Prevent non-superusers from editing Textarea Markup fields and reset
      * page-specific field value if it matches defaultValue in field settings.
      * 
-     * @param HookEvent $event
-     * @throws WirePermissionException if non-superuser attempts to edit Textarea Markup field
+     * @param WireInputData $input
      */
-    public function hookSaveReady(HookEvent $event) {
-        $page = $event->arguments[0];
-        foreach ($page->fields as $field) {
-            $inputfield = $field->getInputfield($page);
-            if ($inputfield->className == $this->className()) {
-                if ($page->isChanged($field->name) && !$this->user->isSuperuser()) {
-                    throw new WirePermissionException($this->_('Only superusers can edit field \'' . $field->name . '\''));
-                } else if ($page->$field === $inputfield->defaultValue) {
-                    $page->$field = '';
-                }
-            }
+    public function ___processInput(WireInputData $input) {
+        parent::___processInput($input);
+        $page = $this->process->getPage();
+        if ($this->attr('value') != $page->{$this->name} && !$this->user->isSuperuser()) {
+            $this->attr('value', $page->{$this->name});
+        } else if ($page->{$this->name} === $this->defaultValue) {
+            $this->attr('value', '');
         }
     }
 
