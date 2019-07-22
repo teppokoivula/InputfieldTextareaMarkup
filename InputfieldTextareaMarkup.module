@@ -7,9 +7,8 @@
  * mainly in Page Edit context. Loosely based on InputfieldMarkup from core, but
  * extends textarea to allow overriding markup on a per page basis by superuser.
  * 
- * @copyright Copyright (c) 2014, Teppo Koivula
+ * @copyright Copyright (c) 2014-2019, Teppo Koivula
  * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License, version 2
- * 
  */
 class InputfieldTextareaMarkup extends InputfieldTextarea {
 
@@ -22,7 +21,7 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
         return array(
             'title' => __('Textarea Markup', __FILE__),
             'summary' => __('May contain markup, plain text and optionally values from other fields.', __FILE__),
-            'version' => 104,
+            'version' => 111,
         );
     }
 
@@ -59,10 +58,10 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
      *
      * @return string rendered output
      */
-    public function ___render() {
+    public function ___render($page = null) {
 
         $this->skipLabel = $this->skipFieldLabel;
-        
+
         $value = $this->attr('value') ? $this->attr('value') : $this->defaultValue;
         $out = $value;
 
@@ -71,29 +70,15 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
             $page = $this->process->getPage();
         }
 
-        if ($page && $out && strpos($out, "{{") !== false && strpos($out, "}}") !== false) {
-            preg_match_all('#{{(.*?)}}#i', $out, $matches);
-            if (count($matches)) {
-                foreach ($matches[1] as $key => $field_name) {
-                    $field_value = $page->get($field_name);
-                    if ($field_value || $page->template->hasField($field_name)) {
-                        if (is_array($field_value)) {
-                            $field_value = implode(", ", array_filter($field_value));
-                        }
-                        $field_value = $this->sanitizer->text($field_value);
-                        $out = str_replace($matches[0][$key], $field_value, $out);
-                    }
-                }
-            }
-        }
-        
+        $out = $this->parseString($out, $page);
+
         if (count($this->textformatters)) {
             foreach ($this->textformatters as $textformatter) {
                 $t = wire('modules')->get($textformatter);
                 if ($t) $t->formatValue(wire('page'), new Field(), $out);
             }
         }
-        
+
         if ($page && $this->user->isSuperuser()) {
             $done = $this->_('Done');
             $edit = $this->_('Edit');
@@ -105,9 +90,8 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
         } else {
             $out .= "<textarea class='textarea-markup-edit' name='{$this->name}'>" . $this->attr('value') . "</textarea>";
         }
-        
+
         return $out;
-        
     }
 
     /**
@@ -118,10 +102,53 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
     public function ___renderValue() {
         return $this->render();
     }
-    
+
+    /**
+     * Convert placeholders in a string to actual values
+     *
+     * Note that providing this method with a Page object is not strictly
+     * speaking required: some placeholders can be parsed without it too.
+     *
+     * @param string $str
+     * @param Page|null $page
+     * @return string
+     */
+    public function parseString($str = '', $page = null) {
+        if (strpos($str, "{{") !== false && strpos($str, "}}") !== false) {
+            preg_match_all('#{{(.*?)}}#i', $str, $matches);
+            if (!empty($matches)) {
+                foreach ($matches[1] as $key => $field_name) {
+                    if (substr($field_name, 0, 10) == "strtotime:") {
+                        $field_value = substr($field_name, 10);
+                        if (strpos($field_value, "|") !== false) {
+                            list($field_value, $field_value_format) = explode("|", $field_value);
+                            $field_value = date($field_value_format, strtotime($field_value));
+                        } else {
+                            $field_value = strtotime($field_value);
+                        }
+                        if ($field_value) {
+                            $field_value = $this->sanitizer->text($field_value);
+                            $str = str_replace($matches[0][$key], $field_value, $str);
+                        }
+                    } else if ($page && $page instanceof Page) {
+                        $field_value = $page->get($field_name);
+                        if ($field_value || $page->template->hasField($field_name)) {
+                            if (is_array($field_value)) {
+                                $field_value = implode(", ", array_filter($field_value));
+                            }
+                            $field_value = $this->sanitizer->text($field_value);
+                            $str = str_replace($matches[0][$key], $field_value, $str);
+                        }
+                    }
+                }
+            }
+        }
+        return $str;
+    }
+
     /**
      * Get inputfields for config
-     * 
+     *
      * @return InputfieldWrapper
      */
     public function ___getConfigInputfields() {
@@ -147,7 +174,6 @@ class InputfieldTextareaMarkup extends InputfieldTextarea {
         $inputfields->add($field);
 
         return $inputfields;
-
     }
-    
+
 }

@@ -2,7 +2,7 @@ Textarea Markup inputfield for ProcessWire CMS/CMF
 ==================================================
 
 Textarea Markup inputfield for ProcessWire CMS/CMF.
-Copyright (c) 2014 Teppo Koivula
+Copyright (c) 2014-2019 Teppo Koivula
 
 Intended for outputting markup as help or commentary among other inputfields,
 mainly in Page Edit context. Loosely based on InputfieldMarkup from core, but
@@ -29,6 +29,12 @@ string using format {{field_name}}. Example:
 For basic-page with ID 1001 and name "About" this should output following:
 
 `Hello world, I'm a basic-page, my name is About and my ID is 1001!`
+
+In addition to field names, this module supports following custom tags:
+
+- `{{strtotime:+2 weeks|j.n.Y}}`: pass given string (in this example `+2 weeks`)
+  to strtotime() function, and if an optional format string is provided (in this
+  example `j.n.Y`), format the resulting timestamp according to it with date().
 
 ## License
 
