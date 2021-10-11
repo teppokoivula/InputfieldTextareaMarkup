@@ -1,0 +1,23 @@
+{
+    "name": "teppokoivula/inputfield-textarea-markup",
+    "type": "pw-module",
+    "description": "ProcessWire module for outputting markup as help or commentary among other inputfields",
+    "keywords": [
+        "module",
+        "processwire"
+    ],
+    "homepage": "https://github.com/teppokoivula/InputfieldTextareaMarkup",
+    "license": "GPL-2.0-only",
+    "authors": [
+        {
+            "name": "Teppo Koivula",
+            "homepage": "https://github.com/teppokoivula",
+            "email": "teppo.koivula@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1",
+        "processwire/processwire": ">=3.0.112",
+        "wireframe-framework/processwire-composer-installer": "^1.0.0"
+    }
+}
